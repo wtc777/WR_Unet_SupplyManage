@@ -5,6 +5,7 @@ const state = {
   token: localStorage.getItem("unet_token"),
   user: JSON.parse(localStorage.getItem("unet_user") || "null"),
   refreshHandle: null,
+
   events: {
     page: 1,
     pageSize: 10,
@@ -17,6 +18,7 @@ const state = {
     },
     initialized: false,
   },
+
 };
 
 const loginView = document.getElementById("login-view");
@@ -27,10 +29,12 @@ const logoutButton = document.getElementById("logout-button");
 const refreshButton = document.getElementById("refresh-button");
 const taskForm = document.getElementById("task-form");
 const taskFeedback = document.getElementById("task-feedback");
+
 const navButtons = document.querySelectorAll("[data-nav-target]");
 const dashboardPages = document.querySelectorAll(".dashboard-page");
 const topbarTitle = document.getElementById("topbar-title");
 const topbarDesc = document.getElementById("topbar-desc");
+
 
 const metricGrid = document.getElementById("metric-grid");
 const deviceTable = document.getElementById("device-table");
@@ -43,6 +47,7 @@ const integrationPanel = document.getElementById("integration-panel");
 const userName = document.getElementById("user-name");
 const userRole = document.getElementById("user-role");
 const userAvatar = document.getElementById("user-avatar");
+
 
 const interface4FilterForm = document.getElementById("interface4-filter");
 const interface4Feedback = document.getElementById("interface4-feedback");
@@ -123,6 +128,7 @@ if (interface4Export) {
   interface4Export.addEventListener("click", handleExportInterface4Events);
 }
 
+
 document.addEventListener("visibilitychange", () => {
   if (!state.token) return;
   if (document.hidden) {
@@ -130,9 +136,11 @@ document.addEventListener("visibilitychange", () => {
   } else {
     refreshData();
     startAutoRefresh();
+
     if (isPageActive("events-page")) {
       loadInterface4Events();
     }
+
   }
 });
 
@@ -203,18 +211,22 @@ function showDashboard(user) {
   userAvatar.textContent = user.name?.slice(0, 1)?.toUpperCase() || "U";
   loginView.classList.remove("active");
   dashboardView.classList.add("active");
+
   state.events.page = 1;
   state.events.total = 0;
   state.events.initialized = false;
   activatePage("overview-page");
+
 }
 
 function logout(manual = false) {
   state.token = null;
   state.user = null;
+
   state.events.page = 1;
   state.events.total = 0;
   state.events.initialized = false;
+
   localStorage.removeItem("unet_token");
   localStorage.removeItem("unet_user");
   showLogin();
@@ -222,6 +234,7 @@ function logout(manual = false) {
     loginFeedback.textContent = "已退出，请重新登录";
   }
 }
+
 
 function activatePage(targetId) {
   navButtons.forEach((button) => {
@@ -247,6 +260,7 @@ function isPageActive(pageId) {
 }
 
 async function authorizedFetch(path, options = {}) {
+
   if (!state.token) {
     throw new Error("未登录");
   }
@@ -263,11 +277,13 @@ async function authorizedFetch(path, options = {}) {
     const message = await extractError(response);
     throw new Error(message);
   }
+
   return response;
 }
 
 async function apiFetch(path, options = {}) {
   const response = await authorizedFetch(path, options);
+
   return response.json();
 }
 
@@ -387,7 +403,9 @@ function renderMetrics(metrics) {
 
   metricGrid.innerHTML = `
     ${cards}
+
     <article class="metric-card highlight">
+
       <h5>物料吞吐趋势</h5>
       <div class="metric-materials">${materials}</div>
     </article>
@@ -489,6 +507,7 @@ function renderIntegrations(integrations) {
     .join("");
 }
 
+
 function renderInterface4Events(data) {
   const items = Array.isArray(data.items) ? data.items : [];
   interface4TableBody.innerHTML = items
@@ -579,6 +598,7 @@ async function handleExportInterface4Events() {
   }
 }
 
+
 function translateStatus(status) {
   const map = {
     online: "在线",
@@ -588,9 +608,11 @@ function translateStatus(status) {
     in_progress: "执行中",
     completed: "已完成",
     degraded: "性能下降",
+
     processing: "处理中",
   };
   return map[status] || status || "--";
+
 }
 
 function translatePriority(priority) {
@@ -611,6 +633,7 @@ function translateSeverity(severity) {
   return map[severity] || severity;
 }
 
+
 function translateEventStatus(status) {
   const map = {
     captured: "已捕获",
@@ -629,6 +652,7 @@ function formatSource(source) {
   };
   return map[source] || source || "--";
 }
+
 
 function formatTimestamp(value) {
   if (!value) return "--";
