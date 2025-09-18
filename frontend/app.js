@@ -5,6 +5,20 @@ const state = {
   token: localStorage.getItem("unet_token"),
   user: JSON.parse(localStorage.getItem("unet_user") || "null"),
   refreshHandle: null,
+
+  events: {
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    filters: {
+      keyword: "",
+      status: "",
+      start: "",
+      end: "",
+    },
+    initialized: false,
+  },
+
 };
 
 const loginView = document.getElementById("login-view");
@@ -15,6 +29,12 @@ const logoutButton = document.getElementById("logout-button");
 const refreshButton = document.getElementById("refresh-button");
 const taskForm = document.getElementById("task-form");
 const taskFeedback = document.getElementById("task-feedback");
+
+const navButtons = document.querySelectorAll("[data-nav-target]");
+const dashboardPages = document.querySelectorAll(".dashboard-page");
+const topbarTitle = document.getElementById("topbar-title");
+const topbarDesc = document.getElementById("topbar-desc");
+
 
 const metricGrid = document.getElementById("metric-grid");
 const deviceTable = document.getElementById("device-table");
@@ -28,10 +48,86 @@ const userName = document.getElementById("user-name");
 const userRole = document.getElementById("user-role");
 const userAvatar = document.getElementById("user-avatar");
 
-loginForm.addEventListener("submit", handleLogin);
-logoutButton.addEventListener("click", () => logout(true));
-refreshButton.addEventListener("click", () => refreshData());
-taskForm.addEventListener("submit", handleCreateTask);
+
+const interface4FilterForm = document.getElementById("interface4-filter");
+const interface4Feedback = document.getElementById("interface4-feedback");
+const interface4TableBody = document.getElementById("interface4-table-body");
+const interface4Empty = document.getElementById("interface4-empty");
+const interface4Total = document.getElementById("interface4-total");
+const interface4PageInfo = document.getElementById("interface4-page-info");
+const interface4Prev = document.getElementById("interface4-prev");
+const interface4Next = document.getElementById("interface4-next");
+const interface4Export = document.getElementById("interface4-export");
+
+const pageMeta = {
+  "overview-page": {
+    title: "集中供料驾驶舱",
+    desc: "Modbus · OPC UA · 任务调度一体化",
+  },
+  "events-page": {
+    title: "接口4 数据归档",
+    desc: "实时采集事件全链路追踪",
+  },
+};
+
+if (loginForm) {
+  loginForm.addEventListener("submit", handleLogin);
+}
+if (logoutButton) {
+  logoutButton.addEventListener("click", () => logout(true));
+}
+if (refreshButton) {
+  refreshButton.addEventListener("click", () => refreshData());
+}
+if (taskForm) {
+  taskForm.addEventListener("submit", handleCreateTask);
+}
+
+navButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!state.token) return;
+    const target = button.dataset.navTarget;
+    if (target) {
+      activatePage(target);
+    }
+  });
+});
+
+if (interface4FilterForm) {
+  interface4FilterForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const formData = new FormData(interface4FilterForm);
+    state.events.filters = {
+      keyword: (formData.get("keyword") || "").trim(),
+      status: (formData.get("status") || "").trim(),
+      start: formData.get("start") || "",
+      end: formData.get("end") || "",
+    };
+    loadInterface4Events({ resetPage: true });
+  });
+}
+
+if (interface4Prev) {
+  interface4Prev.addEventListener("click", () => {
+    if (state.events.page <= 1) return;
+    state.events.page -= 1;
+    loadInterface4Events();
+  });
+}
+
+if (interface4Next) {
+  interface4Next.addEventListener("click", () => {
+    const totalPages = Math.max(1, Math.ceil(state.events.total / state.events.pageSize));
+    if (state.events.page >= totalPages) return;
+    state.events.page += 1;
+    loadInterface4Events();
+  });
+}
+
+if (interface4Export) {
+  interface4Export.addEventListener("click", handleExportInterface4Events);
+}
+
 
 document.addEventListener("visibilitychange", () => {
   if (!state.token) return;
@@ -40,6 +136,11 @@ document.addEventListener("visibilitychange", () => {
   } else {
     refreshData();
     startAutoRefresh();
+
+    if (isPageActive("events-page")) {
+      loadInterface4Events();
+    }
+
   }
 });
 
@@ -110,11 +211,22 @@ function showDashboard(user) {
   userAvatar.textContent = user.name?.slice(0, 1)?.toUpperCase() || "U";
   loginView.classList.remove("active");
   dashboardView.classList.add("active");
+
+  state.events.page = 1;
+  state.events.total = 0;
+  state.events.initialized = false;
+  activatePage("overview-page");
+
 }
 
 function logout(manual = false) {
   state.token = null;
   state.user = null;
+
+  state.events.page = 1;
+  state.events.total = 0;
+  state.events.initialized = false;
+
   localStorage.removeItem("unet_token");
   localStorage.removeItem("unet_user");
   showLogin();
@@ -123,7 +235,32 @@ function logout(manual = false) {
   }
 }
 
-async function apiFetch(path, options = {}) {
+
+function activatePage(targetId) {
+  navButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.navTarget === targetId);
+  });
+  dashboardPages.forEach((page) => {
+    page.classList.toggle("active", page.id === targetId);
+  });
+  const meta = pageMeta[targetId];
+  if (meta) {
+    topbarTitle.textContent = meta.title;
+    topbarDesc.textContent = meta.desc;
+  }
+  if (targetId === "events-page") {
+    loadInterface4Events({ resetPage: !state.events.initialized });
+    state.events.initialized = true;
+  }
+}
+
+function isPageActive(pageId) {
+  const page = document.getElementById(pageId);
+  return page?.classList.contains("active");
+}
+
+async function authorizedFetch(path, options = {}) {
+
   if (!state.token) {
     throw new Error("未登录");
   }
@@ -140,6 +277,13 @@ async function apiFetch(path, options = {}) {
     const message = await extractError(response);
     throw new Error(message);
   }
+
+  return response;
+}
+
+async function apiFetch(path, options = {}) {
+  const response = await authorizedFetch(path, options);
+
   return response.json();
 }
 
@@ -259,7 +403,9 @@ function renderMetrics(metrics) {
 
   metricGrid.innerHTML = `
     ${cards}
-    <article class="metric-card">
+
+    <article class="metric-card highlight">
+
       <h5>物料吞吐趋势</h5>
       <div class="metric-materials">${materials}</div>
     </article>
@@ -361,6 +507,98 @@ function renderIntegrations(integrations) {
     .join("");
 }
 
+
+function renderInterface4Events(data) {
+  const items = Array.isArray(data.items) ? data.items : [];
+  interface4TableBody.innerHTML = items
+    .map((item) => {
+      const quantity = item.producedQty != null ? `${Number(item.producedQty).toFixed(1)} ${item.unit || ""}`.trim() : "--";
+      return `
+        <tr>
+          <td>${item.eventId}</td>
+          <td>${formatTimestamp(item.triggeredAt)}</td>
+          <td>${item.deviceId || "--"}</td>
+          <td>${item.pointCode || "--"}</td>
+          <td>${item.materialCode || "--"}</td>
+          <td>${item.batchNo || "--"}</td>
+          <td>${quantity}</td>
+          <td><span class="status-pill event ${item.status}">${translateEventStatus(item.status)}</span></td>
+          <td>${formatSource(item.triggerSource)}</td>
+          <td>${item.handler || "--"}</td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  interface4Empty.classList.toggle("hidden", items.length > 0);
+  const total = typeof data.total === "number" ? data.total : 0;
+  const page = data.page || state.events.page;
+  const pageSize = data.pageSize || state.events.pageSize;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  interface4Total.textContent = `共 ${total} 条记录`;
+  interface4PageInfo.textContent = `第 ${page} / ${totalPages} 页`;
+  interface4Prev.disabled = page <= 1;
+  interface4Next.disabled = page >= totalPages;
+
+  state.events.page = page;
+  state.events.pageSize = pageSize;
+  state.events.total = total;
+}
+
+async function loadInterface4Events({ resetPage = false } = {}) {
+  if (!state.token) return;
+  if (resetPage) {
+    state.events.page = 1;
+  }
+  const params = new URLSearchParams({
+    page: state.events.page,
+    pageSize: state.events.pageSize,
+  });
+  const { keyword, status, start, end } = state.events.filters;
+  if (keyword) params.set("keyword", keyword);
+  if (status) params.set("status", status);
+  if (start) params.set("start", start);
+  if (end) params.set("end", end);
+
+  try {
+    interface4Feedback.textContent = "正在加载...";
+    const data = await apiFetch(`/interface4/events?${params.toString()}`);
+    renderInterface4Events(data);
+    interface4Feedback.textContent = "";
+  } catch (error) {
+    interface4Feedback.textContent = error.message || "加载失败";
+    renderInterface4Events({ items: [], total: 0, page: state.events.page, pageSize: state.events.pageSize });
+  }
+}
+
+async function handleExportInterface4Events() {
+  if (!state.token) return;
+  const params = new URLSearchParams();
+  const { keyword, status, start, end } = state.events.filters;
+  if (keyword) params.set("keyword", keyword);
+  if (status) params.set("status", status);
+  if (start) params.set("start", start);
+  if (end) params.set("end", end);
+  try {
+    interface4Feedback.textContent = "正在导出...";
+    const response = await authorizedFetch(`/interface4/events/export?${params.toString()}`);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `interface4-events-${Date.now()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    interface4Feedback.textContent = "";
+  } catch (error) {
+    interface4Feedback.textContent = error.message || "导出失败";
+  }
+}
+
+
 function translateStatus(status) {
   const map = {
     online: "在线",
@@ -370,8 +608,11 @@ function translateStatus(status) {
     in_progress: "执行中",
     completed: "已完成",
     degraded: "性能下降",
+
+    processing: "处理中",
   };
-  return map[status] || status;
+  return map[status] || status || "--";
+
 }
 
 function translatePriority(priority) {
@@ -391,6 +632,27 @@ function translateSeverity(severity) {
   };
   return map[severity] || severity;
 }
+
+
+function translateEventStatus(status) {
+  const map = {
+    captured: "已捕获",
+    processing: "处理中",
+    completed: "已完成",
+    failed: "异常",
+  };
+  return map[status] || status || "--";
+}
+
+function formatSource(source) {
+  const map = {
+    OPC_UA: "OPC UA",
+    Modbus: "Modbus",
+    HTTP: "HTTP 回调",
+  };
+  return map[source] || source || "--";
+}
+
 
 function formatTimestamp(value) {
   if (!value) return "--";
