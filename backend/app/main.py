@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import auth, data, db, schemas
 
+
 app = FastAPI(
     title="UNET Supply Management MVP",
     description="Demo API and frontend prototype for the集中供料管理系统",
@@ -91,6 +92,7 @@ def list_audit_logs(_: auth.AuthenticatedUser = Depends(get_current_user)) -> Li
 @app.get("/api/integrations", response_model=List[schemas.IntegrationStatus])
 def list_integrations(_: auth.AuthenticatedUser = Depends(get_current_user)) -> List[schemas.IntegrationStatus]:
     return [schemas.IntegrationStatus(**item) for item in data.get_integrations()]
+
 
 
 @app.get("/api/interface4/events", response_model=schemas.Interface4EventListResponse)

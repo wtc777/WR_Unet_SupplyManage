@@ -144,3 +144,4 @@ class Interface4EventListResponse(Schema):
     total: int
     page: int
     pageSize: int
+
