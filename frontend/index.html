@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UNET 集中供料管理系统 - MVP</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <section id="login-view" class="view active">
+        <div class="login-shell">
+          <div class="login-hero">
+            <div class="hero-content">
+              <div class="hero-badge">UNET 集中供料</div>
+              <h1>随时随地，管理车间现场</h1>
+              <p>
+                工程自动下发 · 产线数据回流 · Modbus / OPC UA 一体化采集。<br />
+                通过 UNET 管理系统，将实时数据、任务调度、报警闭环统一在一个可视化驾驶舱中。
+              </p>
+              <ul>
+                <li>工单实时状态跟踪，异常自动预警</li>
+                <li>产能 &amp; 物料数据可视化洞察</li>
+                <li>接口4 事件留痕，随时追溯</li>
+              </ul>
+            </div>
+            <div class="hero-visual">
+              <div class="orb orb-1"></div>
+              <div class="orb orb-2"></div>
+              <div class="orb orb-3"></div>
+              <div class="grid"></div>
+            </div>
+          </div>
+          <div class="login-card">
+            <div class="login-logo">UNET</div>
+            <h2>欢迎登录 UNET 管理系统</h2>
+            <p class="login-subtitle">使用授权账号进入集中供料驾驶舱</p>
+            <form id="login-form" class="login-form">
+              <label for="username">用户名</label>
+              <input
+                id="username"
+                name="username"
+                placeholder="admin / operator / viewer"
+                required
+              />
+              <label for="password">密码</label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="请输入密码"
+                required
+              />
+              <button type="submit" class="primary">登录</button>
+              <p class="hint">Demo 账号：admin/admin123、operator/op2024、viewer/guest</p>
+            </form>
+            <div id="login-feedback" class="feedback"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="dashboard-view" class="view">
+        <div class="dashboard-shell">
+          <aside class="sidebar">
+            <div class="sidebar-brand">
+              <div class="logo-mark">U</div>
+              <div class="brand-meta">
+                <span>UNET</span>
+                <small>集中供料系统</small>
+              </div>
+            </div>
+            <nav class="sidebar-nav">
+              <button class="nav-item active" data-nav-target="overview-page">
+                <span class="icon icon-dashboard"></span>
+                <span>驾驶舱总览</span>
+              </button>
+              <button class="nav-item" data-nav-target="events-page">
+                <span class="icon icon-table"></span>
+                <span>接口4 产出记录</span>
+              </button>
+            </nav>
+            <div class="sidebar-footer">
+              <div class="footer-card">
+                <strong>数据刷新</strong>
+                <p>默认 5 秒自动刷新，可随时手动触发。</p>
+                <button id="refresh-button" class="ghost">立即刷新</button>
+              </div>
+            </div>
+          </aside>
+
+          <div class="dashboard-main">
+            <header class="topbar">
+              <div class="topbar-info">
+                <h1 id="topbar-title">集中供料驾驶舱</h1>
+                <p id="topbar-desc">Modbus · OPC UA · 任务调度一体化</p>
+              </div>
+              <div class="topbar-actions">
+                <div class="user-chip">
+                  <div class="avatar" id="user-avatar">U</div>
+                  <div class="meta">
+                    <span id="user-name">--</span>
+                    <small id="user-role">--</small>
+                  </div>
+                </div>
+                <button id="logout-button" class="secondary">退出登录</button>
+              </div>
+            </header>
+
+            <main class="main-scroll">
+              <section id="overview-page" class="dashboard-page active">
+                <header class="page-header">
+                  <div>
+                    <h2>现场运行总览</h2>
+                    <p>实时掌握 9 台 Modbus 设备、供料任务与报警闭环。</p>
+                  </div>
+                  <span class="timestamp" id="dashboard-updated">--</span>
+                </header>
+
+                <section class="integration-strip" id="integration-panel"></section>
+
+                <section class="metrics">
+                  <div class="metrics-grid" id="metric-grid"></div>
+                </section>
+
+                <section class="panel-grid">
+                  <article class="panel wide">
+                    <header class="panel-header">
+                      <div>
+                        <h3>实时设备监控</h3>
+                        <p>温度、料位、瞬时流量、报警状态一览</p>
+                      </div>
+                    </header>
+                    <div class="panel-body">
+                      <table class="data-table">
+                        <thead>
+                          <tr>
+                            <th>设备</th>
+                            <th>物料</th>
+                            <th>状态</th>
+                            <th>温度 (°C)</th>
+                            <th>料位 (%)</th>
+                            <th>瞬时流量 (kg/h)</th>
+                            <th>心跳时间</th>
+                            <th>报警</th>
+                          </tr>
+                        </thead>
+                        <tbody id="device-table"></tbody>
+                      </table>
+                    </div>
+                  </article>
+
+                  <aside class="panel stack">
+                    <article class="stack-item">
+                      <header class="panel-header">
+                        <div>
+                          <h3>任务调度队列</h3>
+                          <p>ERP / MES 下发任务自动排产</p>
+                        </div>
+                      </header>
+                      <div class="panel-body">
+                        <table class="data-table">
+                          <thead>
+                            <tr>
+                              <th>任务</th>
+                              <th>物料</th>
+                              <th>目标设备</th>
+                              <th>数量 (kg)</th>
+                              <th>优先级</th>
+                              <th>进度</th>
+                              <th>状态</th>
+                            </tr>
+                          </thead>
+                          <tbody id="task-table"></tbody>
+                        </table>
+                      </div>
+                    </article>
+
+                    <article class="stack-item">
+                      <header class="panel-header">
+                        <div>
+                          <h3>新建补料任务</h3>
+                          <p>补料需求快速入队</p>
+                        </div>
+                      </header>
+                      <div class="panel-body">
+                        <form id="task-form" class="task-form">
+                          <div class="field">
+                            <label for="task-material">物料编码</label>
+                            <input
+                              id="task-material"
+                              name="materialCode"
+                              placeholder="例如 PA66"
+                              required
+                            />
+                          </div>
+                          <div class="field">
+                            <label for="task-device">目标设备</label>
+                            <input
+                              id="task-device"
+                              name="targetDevice"
+                              placeholder="例如 Hopper01"
+                              required
+                            />
+                          </div>
+                          <div class="field">
+                            <label for="task-quantity">数量 (kg)</label>
+                            <input
+                              id="task-quantity"
+                              name="quantity"
+                              type="number"
+                              min="1"
+                              value="200"
+                              required
+                            />
+                          </div>
+                          <div class="field">
+                            <label for="task-priority">优先级</label>
+                            <select id="task-priority" name="priority">
+                              <option value="high">高</option>
+                              <option value="medium" selected>中</option>
+                              <option value="low">低</option>
+                            </select>
+                          </div>
+                          <div class="field">
+                            <label for="task-scheduled">计划时间</label>
+                            <input id="task-scheduled" name="scheduledAt" type="datetime-local" />
+                          </div>
+                          <button class="primary" type="submit">创建任务</button>
+                          <div id="task-feedback" class="feedback"></div>
+                        </form>
+                      </div>
+                    </article>
+
+                    <article class="stack-item">
+                      <header class="panel-header">
+                        <div>
+                          <h3>报警中心</h3>
+                          <p>异常告警快速定位与确认</p>
+                        </div>
+                      </header>
+                      <div class="panel-body">
+                        <table class="data-table">
+                          <thead>
+                            <tr>
+                              <th>时间</th>
+                              <th>设备</th>
+                              <th>级别</th>
+                              <th>描述</th>
+                              <th>状态</th>
+                            </tr>
+                          </thead>
+                          <tbody id="alert-table"></tbody>
+                        </table>
+                      </div>
+                    </article>
+
+                    <article class="stack-item">
+                      <header class="panel-header">
+                        <div>
+                          <h3>审计日志</h3>
+                          <p>记录接口调用与用户操作轨迹</p>
+                        </div>
+                      </header>
+                      <div class="panel-body">
+                        <ul id="audit-list" class="audit-list"></ul>
+                      </div>
+                    </article>
+                  </aside>
+                </section>
+              </section>
+
+              <section id="events-page" class="dashboard-page">
+                <header class="page-header">
+                  <div>
+                    <h2>接口4 产出记录</h2>
+                    <p>Modbus / OPC UA 触发的产出数据归档，可查询并导出。</p>
+                  </div>
+                </header>
+
+                <section class="filters-card">
+                  <form id="interface4-filter" class="filter-form">
+                    <div class="field">
+                      <label for="interface4-keyword">关键字</label>
+                      <input
+                        id="interface4-keyword"
+                        name="keyword"
+                        placeholder="事件编号 / 物料 / 设备"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="interface4-status">状态</label>
+                      <select id="interface4-status" name="status">
+                        <option value="">全部</option>
+                        <option value="captured">已捕获</option>
+                        <option value="processing">处理中</option>
+                        <option value="completed">已完成</option>
+                        <option value="failed">异常</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="interface4-start">开始日期</label>
+                      <input id="interface4-start" name="start" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="interface4-end">结束日期</label>
+                      <input id="interface4-end" name="end" type="date" />
+                    </div>
+                    <div class="actions">
+                      <button class="primary" type="submit">查询</button>
+                      <button id="interface4-export" type="button" class="secondary">导出 CSV</button>
+                    </div>
+                  </form>
+                  <div id="interface4-feedback" class="feedback"></div>
+                </section>
+
+                <section class="panel">
+                  <div class="panel-body">
+                    <div class="table-wrapper">
+                      <table class="data-table">
+                        <thead>
+                          <tr>
+                            <th>事件编号</th>
+                            <th>触发时间</th>
+                            <th>设备/料斗</th>
+                            <th>点位</th>
+                            <th>物料</th>
+                            <th>批次号</th>
+                            <th>产出</th>
+                            <th>状态</th>
+                            <th>来源</th>
+                            <th>处理通道</th>
+                          </tr>
+                        </thead>
+                        <tbody id="interface4-table-body"></tbody>
+                      </table>
+                      <div id="interface4-empty" class="empty-state hidden">暂无数据</div>
+                    </div>
+                    <footer class="table-footer">
+                      <span id="interface4-total">-- 条记录</span>
+                      <div class="pagination">
+                        <button id="interface4-prev" class="ghost">上一页</button>
+                        <span id="interface4-page-info">第 1 / 1 页</span>
+                        <button id="interface4-next" class="ghost">下一页</button>
+                      </div>
+                    </footer>
+                  </div>
+                </section>
+              </section>
+            </main>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script src="/assets/app.js" type="module"></script>
+  </body>
+</html>
