@@ -1,0 +1,42 @@
+name: Auto-merge Codex branches to main
+
+on:
+  push:
+    branches:
+      - 'codex/**'   # 只监听 codex/ 前缀的分支
+
+permissions:
+  contents: write    # 允许工作流向仓库推送
+
+concurrency:
+  group: auto-merge-codex
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set Git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge current codex branch into main (prefer codex changes)
+        env:
+          SRC_BRANCH: ${{ github.ref_name }}   # 比如 codex/xxx
+        run: |
+          echo "Merging $SRC_BRANCH -> main"
+          # 取最新 main
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+          # 合并。-X theirs 表示遇到冲突优先采用“被合并的分支”（也就是 codex 分支）的改动
+          set -e
+          git merge "origin/$SRC_BRANCH" --no-edit -X theirs
+          git push origin main

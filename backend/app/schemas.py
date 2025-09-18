@@ -105,6 +105,7 @@ class IntegrationStatus(Schema):
     lastUpdated: str
 
 
+
 class Interface4Event(Schema):
     id: int
     eventId: str = Field(..., alias="event_id")
@@ -144,3 +145,4 @@ class Interface4EventListResponse(Schema):
     total: int
     page: int
     pageSize: int
+

@@ -1,4 +1,5 @@
 :root {
+
   --font-family: "Manrope", "Microsoft YaHei", sans-serif;
   --color-bg: #f5f7fb;
   --color-card: #ffffff;
@@ -16,11 +17,13 @@
   --radius-lg: 18px;
   --radius-md: 12px;
   --radius-sm: 8px;
+
 }
 
 * {
   box-sizing: border-box;
 }
+
 
 html,
 body {
@@ -71,6 +74,7 @@ button:disabled {
 /* Login */
 
 .login-shell {
+
   position: relative;
   min-height: 100vh;
   display: flex;
@@ -81,16 +85,19 @@ button:disabled {
 
 .login-hero {
   position: relative;
+
   flex: 1;
   padding: clamp(80px, 14vh, 140px)
     clamp(48px, 10vw, 128px)
     clamp(220px, 26vh, 280px)
     clamp(48px, 8vw, 120px);
+
   display: flex;
   flex-direction: column;
   justify-content: center;
   overflow: hidden;
   color: #fff;
+
 }
 
 .hero-content {
@@ -104,6 +111,7 @@ button:disabled {
   align-items: center;
   padding: 8px 16px;
   border-radius: 999px;
+
   background: rgba(8, 103, 92, 0.55);
   color: #e8fffa;
   font-weight: 700;
@@ -116,6 +124,7 @@ button:disabled {
   font-size: 46px;
   margin: 28px 0 16px;
   line-height: 1.15;
+
   color: #fff;
   text-shadow: 0 24px 60px rgba(12, 46, 46, 0.45);
 }

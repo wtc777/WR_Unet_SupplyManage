@@ -1,6 +1,7 @@
 """FastAPI application exposing a demo API and serving the MVP frontend."""
 from __future__ import annotations
 
+
 import csv
 from io import StringIO
 from pathlib import Path
@@ -12,6 +13,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import auth, data, db, schemas
+
 
 app = FastAPI(
     title="UNET Supply Management MVP",
@@ -91,6 +93,7 @@ def list_audit_logs(_: auth.AuthenticatedUser = Depends(get_current_user)) -> Li
 @app.get("/api/integrations", response_model=List[schemas.IntegrationStatus])
 def list_integrations(_: auth.AuthenticatedUser = Depends(get_current_user)) -> List[schemas.IntegrationStatus]:
     return [schemas.IntegrationStatus(**item) for item in data.get_integrations()]
+
 
 
 @app.get("/api/interface4/events", response_model=schemas.Interface4EventListResponse)
@@ -196,6 +199,7 @@ def export_interface4_events(
     response = StreamingResponse(generate(), media_type="text/csv; charset=utf-8")
     response.headers["Content-Disposition"] = "attachment; filename=interface4_events.csv"
     return response
+
 
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
